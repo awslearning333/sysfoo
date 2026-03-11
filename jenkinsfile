@@ -6,9 +6,21 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/awslearning333/sysfoo.git'
+            }
+        }
+
+        stage('Check User') {
+            steps {
+                sh '''
+                echo "Current user running Jenkins pipeline:"
+                whoami
+                echo "User ID details:"
+                id
+                '''
             }
         }
 
@@ -32,7 +44,6 @@ pipeline {
 
         stage('Run Application') {
             steps {
-                // Kill any old instance first, then start new one
                 sh '''
                 pkill -f "java -jar" || true
                 nohup java -jar target/*.jar --server.port=8081 > app.log 2>&1 &
