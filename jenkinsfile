@@ -7,13 +7,14 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
+                echo "Cloning repository..."
                 git branch: 'main', url: 'https://github.com/awslearning333/sysfoo.git'
             }
         }
 
-        stage('Check User') {
+        stage('Check Jenkins User') {
             steps {
                 sh '''
                 echo "Current user running Jenkins pipeline:"
@@ -26,29 +27,70 @@ pipeline {
 
         stage('Build') {
             steps {
+                echo "Compiling project..."
                 sh 'mvn clean compile'
             }
         }
 
         stage('Test') {
             steps {
+                echo "Running tests..."
                 sh 'mvn test'
             }
         }
 
         stage('Package') {
             steps {
+                echo "Creating JAR package..."
                 sh 'mvn package'
+            }
+        }
+
+        stage('Verify Artifact') {
+            steps {
+                sh '''
+                echo "Checking generated files..."
+                ls -l target/
+                '''
+            }
+        }
+
+        stage('Stop Old Application') {
+            steps {
+                sh '''
+                echo "Stopping old application if running..."
+                pkill -f "sysfoo" || true
+                '''
             }
         }
 
         stage('Run Application') {
             steps {
                 sh '''
-                pkill -f "java -jar" || true
-                nohup java -jar target/*.jar --server.port=8081 > app.log 2>&1 &
+                echo "Starting Spring Boot application..."
+                JENKINS_NODE_COOKIE=dontKillMe nohup java -jar target/sysfoo-0.0.1-SNAPSHOT.jar --server.port=8081 > app.log 2>&1 &
                 '''
             }
+        }
+
+        stage('Check Running Process') {
+            steps {
+                sh '''
+                echo "Checking running Java processes..."
+                ps -ef | grep java | grep -v grep
+                '''
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully. Application should be running on port 8081."
+        }
+
+        failure {
+            echo "Pipeline failed. Check console output for errors."
         }
     }
 }
